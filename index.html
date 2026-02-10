@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GIS Image Annotation Tool</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+ 
+<body>
+ 
+  <!-- =========================================
+       TWO-ROW HEADER
+  ========================================== -->
+  <header class="topbar topbar--2row" role="banner">
+ 
+    <!-- Row 1: Brand -->
+    <div class="topbar__row topbar__row--brand">
+      <div class="brand" aria-label="Tool identity">
+        <div class="logo" aria-hidden="true">
+          <img src="logo1.png" alt="Logo"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';" />
+          <span class="logo__fallback" style="display:none;">LOGO</span>
+        </div>
+ 
+        <div class="brand__text">
+          <h1>Image Annotation Tool</h1>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Row 2: Tools -->
+    <div class="topbar__row topbar__row--tools">
+ 
+      <!-- LEFT tools -->
+      <div class="topbar__tools-left">
+        <button id="importBtn" class="btn btn--ghost" type="button">Import</button>
+        <input id="fileInput" class="sr-only" type="file" accept="image/*" multiple />
+ 
+        <!-- Templates -->
+        <div class="mode" id="mode">
+          <button class="mode__btn" id="modeBtn" type="button"
+                  aria-haspopup="menu" aria-expanded="false" aria-controls="modeMenu">
+            AnnotationTypes <span class="chev" aria-hidden="true">▾</span>
+          </button>
+ 
+          <div class="mode__menu" id="modeMenu" role="menu" aria-label="Annotation templates">
+            <button class="mode__item is-active" type="button" role="menuitem" data-mode="bbox">
+              Bounding Box
+            </button>
+            <button class="mode__item" type="button" role="menuitem" data-mode="poly">
+              Polygon Annotation
+            </button>
+          </div>
+        </div>
+ 
+        <!-- Add Label -->
+        <div class="topbar__labeladd" aria-label="Add label">
+          <input id="newClassName" type="text" placeholder="label name (e.g., pothole)" />
+          <input id="newClassColor" type="color" value="#fb923c" title="Label color" />
+          <button id="inlineAddBtn" class="btn btn--ghost" type="button">Add Label</button>
+        </div>
+      </div>
+     
+ 
+ 
+      <!-- RIGHT tools -->
+      <div class="topbar__tools-right">
+       
+<button id="resetEverythingBtn" class="btn btn--ghost" type="button" title="Reset images, labels, annotations, regions">
+  Reset
+</button>
+        <button id="toggleDetailsBtn" class="btn btn--ghost" type="button"
+                aria-pressed="false" title="Hide/Show Details panel">
+          Hide Details
+        </button>
+ 
+        <button id="exportBtn" class="btn btn--primary" type="button">Export ZIP</button>
+         </div>
+ 
+    </div>
+  </header>
+ 
+  <!-- =========================================
+       MAIN 3-PANEL LAYOUT
+  ========================================== -->
+  <main class="app" role="main">
+ 
+    <!-- LEFT: Images -->
+    <aside class="panel panel--left sidebar sidebar--left" aria-label="Images panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Images</h2>
+      </div>
+ 
+      <div class="panel__body panel__body--left">
+        <div class="search">
+          <input id="imageSearch" type="text" placeholder="Search images..." />
+        </div>
+ 
+        <div class="image-list" id="imageList" aria-label="Uploaded images">
+         
+        </div>
+      </div>
+    </aside>
+ 
+    <!-- Left resizer -->
+    <div class="lsf-resizer__handle lsf-resizer__handle_quickview" aria-hidden="true"></div>
+ 
+    <!-- CENTER: Workspace -->
+    <section class="panel panel--center workspace" aria-label="Workspace">
+      <div class="panel__header workspace__header">
+        <div class="workspace__title">
+          <h2>Workspace</h2>
+          <div class="workspace__meta">
+            <span id="imgName">No image</span>
+            <span id="imgMeta">—</span>
+           
+         <span id="annType" class="meta-pill"></span>
+ 
+          </div>
+        </div>
+ 
+        <div class="workspace__tools" aria-label="Workspace actions">
+          <!-- Undo -->
+          <button class="icon-btn icon-btn--tool" id="undoBtn" type="button"
+                  aria-label="Undo" title="Undo (Ctrl+Z)">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M7.5 8H15a5 5 0 1 1 0 10H9.5" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M7.5 8l3-3M7.5 8l3 3" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+ 
+          <!-- Redo -->
+          <button class="icon-btn icon-btn--tool" id="redoBtn" type="button"
+                  aria-label="Redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M16.5 8H9a5 5 0 1 0 0 10h5.5" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M16.5 8l-3-3M16.5 8l-3 3" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+ 
+      <div class="panel__body workspace__body">
+ 
+        <div class="stage">
+          <div class="stage__frame" id="canvasWrap">
+            <img class="stage__img" id="stageImg" src="" alt="Selected image preview" />
+ 
+            <canvas class="stage__canvas" id="canvas"></canvas>
+ 
+            <div class="stage__empty" id="emptyState">
+              <div class="empty-card">
+                <div class="empty-card__icon">🖼️</div>
+                <div class="empty-card__title">No image selected</div>
+                <div class="empty-card__text">
+                  Use <strong>Upload Images</strong>, then select one to start annotating.
+                </div>
+              </div>
+            </div>
+ 
+            <!-- Zoom UI -->
+            <div class="ga-zoomUI" id="zoomUI" aria-label="Zoom controls">
+              <button type="button" class="ga-zoomBtn" data-zoom="out" title="Zoom out" aria-label="Zoom out">−</button>
+              <button type="button" class="ga-zoomBtn" data-zoom="in" title="Zoom in" aria-label="Zoom in">+</button>
+              <button type="button" class="ga-zoomBtn" data-zoom="fit" title="Fit to screen" aria-label="Fit to screen">⤢</button>
+            </div>
+ 
+          </div>
+        </div>
+ 
+        <!-- Active labels -->
+        <div id="classStrip" class="class-strip" aria-label="Active labels"></div>
+ 
+       
+       
+      </div>
+    </section>
+ 
+    <!-- Right resizer -->
+    <div class="lsf-resizer__handle lsf-resizer__handle_right" aria-hidden="true"></div>
+ 
+    <!-- RIGHT: Details -->
+    <aside class="panel panel--right sidebar sidebar--right" id="rightPane" aria-label="Details panel">
+      <div class="panel__body panel__body--right">
+        <div class="right-stack">
+ 
+          <!-- REGIONS -->
+          <details class="rs-section" open>
+            <summary class="rs-head">
+              <span class="rs-drag" aria-hidden="true">⠿</span>
+              <span class="rs-title">Regions</span>
+              <span class="rs-actions" aria-hidden="true">
+                <span class="rs-mini">›</span>
+                <span class="rs-mini">×</span>
+              </span>
+            </summary>
+ 
+            <div class="rs-body">
+              <div id="regionsList"></div>
+            </div>
+          </details>
+ 
+          <!-- HISTORY -->
+          <details class="rs-section" open>
+            <summary class="rs-head">
+              <span class="rs-drag" aria-hidden="true">⠿</span>
+              <span class="rs-title">History</span>
+              <span class="rs-actions" aria-hidden="true">
+                <span class="rs-mini">›</span>
+                <span class="rs-mini">×</span>
+              </span>
+            </summary>
+ 
+            <div class="rs-body">
+              <div class="rs-empty">
+                <div class="rs-clock" aria-hidden="true">🕘</div>
+                <h3>View annotation activity</h3>
+                <p>See a log of user actions for this task.</p>
+              </div>
+            </div>
+          </details>
+ 
+          <!-- INFO -->
+          <details class="rs-section" open>
+            <summary class="rs-head">
+              <span class="rs-drag" aria-hidden="true">⠿</span>
+              <span class="rs-title">Info</span>
+              <span class="rs-actions" aria-hidden="true">
+                <span class="rs-mini">›</span>
+                <span class="rs-mini">×</span>
+              </span>
+            </summary>
+ 
+            <div class="rs-body">
+              <div class="info-grid">
+                <div class="info-k">Filename</div><div class="info-v" id="infoFilename">—</div>
+                <div class="info-k">Resolution</div><div class="info-v" id="infoResolution">—</div>
+                <div class="info-k">Annotations</div><div class="info-v" id="infoCount">0</div>
+                <div class="info-k">Active Label</div><div class="info-v" id="infoActiveLabel">—</div>
+              </div>
+            </div>
+          </details>
+ 
+          <!-- RELATIONS -->
+          <details class="rs-section">
+            <summary class="rs-head">
+              <span class="rs-drag" aria-hidden="true">⠿</span>
+              <span class="rs-title">Relations</span>
+              <span class="rs-actions" aria-hidden="true">
+                <span class="rs-mini">›</span>
+                <span class="rs-mini">×</span>
+              </span>
+            </summary>
+ 
+            <div class="rs-body">
+              <div class="rs-empty small">
+                <h3>No relations defined</h3>
+                <p>Structure can be extended later.</p>
+              </div>
+            </div>
+          </details>
+ 
+        </div>
+      </div>
+    </aside>
+ 
+  </main>
+ 
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+ 
+  <!-- app -->
+  <script src="script.js"></script>
+</body>
+</html>
+ 
